@@ -391,11 +391,27 @@ def show_user_view():
             sentiment = result["sentiment"]
             score     = result["score"]
             reason    = result.get("reason", "")
+            agent_actions = result.get("agent_actions", [])
 
             is_positive = (sentiment == "positive")
             badge_color  = "#00d4aa" if is_positive else "#ff6b6b"
             badge_bg     = "rgba(0,212,170,0.15)" if is_positive else "rgba(255,107,107,0.15)"
             badge_border = "rgba(0,212,170,0.35)" if is_positive else "rgba(255,107,107,0.35)"
+
+            draft_text = ""
+            for action in agent_actions:
+                if action.get("tool") == "draft_response":
+                    draft_text = action.get("args", {}).get("draft_text", "")
+                    break
+
+            draft_html = ""
+            if draft_text:
+                draft_html = f'''
+                <div style="margin-top:1.5rem;text-align:left;background:rgba(255,255,255,0.03);padding:1.2rem;border-radius:12px;border:1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size:0.75rem;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:0.5rem;letter-spacing:0.05em;">AI Drafted Response</div>
+                    <div style="font-size:0.95rem;color:rgba(255,255,255,0.9);line-height:1.5;font-style:italic;">"{draft_text}"</div>
+                </div>
+                '''
 
             st.markdown(f"""
             <div class="result-card">
@@ -417,6 +433,7 @@ def show_user_view():
                 </div>
                 <div style="font-size:1.9rem;margin-bottom:0.6rem">{_stars(score)}</div>
                 <div style="color:rgba(255,255,255,0.5);font-size:0.88rem;font-style:italic">{reason}</div>
+                {draft_html}
             </div>
             """, unsafe_allow_html=True)
 
@@ -527,7 +544,7 @@ def show_admin_view():
             urgency = (row.get("urgency") or "high").upper()
             reason = row.get("flag_reason") or ""
             parts.append(f"🚩 FLAGGED ({urgency}): {reason}")
-        if row.get("draft_response"):
+        if pd.notna(row.get("draft_response")) and row.get("draft_response"):
             parts.append(f"✍️ DRAFT: {row['draft_response']}")
         return "\n\n".join(parts) if parts else "—"
         
