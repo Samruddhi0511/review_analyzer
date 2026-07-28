@@ -1,6 +1,6 @@
 # 🍽️ Customer Feedback Analyzer
 
-An end-to-end AI-powered restaurant review analysis system. Customers submit reviews and instantly get sentiment analysis. Admins get a full dashboard with AI-generated insights powered by **Groq LLM**.
+An end-to-end AI-powered restaurant review analysis system. Customers submit reviews and instantly get sentiment analysis. Negative reviews are handed off to an **agent** that decides what to do about them. Admins get a full dashboard with AI-generated insights powered by **Groq LLM**.
 
 ---
 
@@ -22,10 +22,19 @@ An end-to-end AI-powered restaurant review analysis system. Customers submit rev
 - Instantly see AI-analyzed **sentiment** (Positive / Negative)
 - Get a **score out of 5** and a short reason from the LLM
 
+### 🤖 Negative Review Agent
+When a review comes back negative, a small agent takes over and decides — on its own, using tool calling — what should happen next:
+- **Flags it for a manager** if the issue is serious (e.g. safety, rude staff), with an urgency level and reason
+- **Drafts a customer-facing response** in an appropriate tone
+- **Checks the database for repeat complaints** (e.g. "cold food" mentioned 3+ times this week) and surfaces it as a trend
+
+The agent can call more than one tool per review, and it's judgment-based — not every negative review gets escalated, only the ones that warrant it.
+
 ### 🔐 Admin Dashboard (password protected)
 - **Stats cards** — Total reviews, Positive count, Negative count, Avg score
 - **AI Insights** — One-line LLM summary of what positive reviews praise and what negative reviews complain about
 - **Full reviews table** — All reviews with color-coded sentiment, star rating, and date
+- **Agent actions** — What the agent decided to do about each negative review (flagged / drafted a response / trend detected)
 
 ---
 
@@ -36,7 +45,8 @@ Customer_feedback_analyzer/
 ├── backend/
 │   ├── __init__.py
 │   ├── database.py      # SQLite setup & queries
-│   ├── llm.py           # Groq API integration
+│   ├── llm.py           # Groq API integration (sentiment + summaries)
+│   ├── agents.py         # Negative-review agent (tool calling: flag, draft, trend-check)
 │   ├── models.py        # Pydantic request/response models
 │   └── main.py          # FastAPI routes
 ├── frontend/
@@ -105,7 +115,7 @@ This sends each review through the LLM for analysis and stores them in the DB. T
 | Method | Route | Description |
 |---|---|---|
 | `GET` | `/` | Health check |
-| `POST` | `/reviews` | Submit a review → LLM analysis → saved to DB |
+| `POST` | `/reviews` | Submit a review → LLM analysis → agent runs if negative → saved to DB |
 | `GET` | `/reviews` | Get all reviews |
 | `GET` | `/admin/summary` | Stats + LLM-generated insights |
 
@@ -121,6 +131,7 @@ To change it, update this line in `frontend/app.py`:
 ```python
 ADMIN_PASSWORD = "admin123"
 ```
+> ⚠️ This is hardcoded for demo purposes. In production, this should be hashed and stored outside the source code (e.g. an environment variable).
 
 ---
 
@@ -135,7 +146,14 @@ Groq LLM analyzes: sentiment + score (1–5) + reason
         ↓
 Stored in SQLite database
         ↓
-Result shown to customer instantly
+If sentiment is Negative:
+        ↓
+Agent (agents.py) decides which tool(s) to call:
+   • flag_for_manager_review  — escalate serious issues
+   • draft_response           — write a reply
+   • check_repeat_complaint   — query DB for a trend
+        ↓
+Agent's actions stored + shown to customer/admin instantly
 
 Admin opens dashboard
         ↓
@@ -143,7 +161,7 @@ GET /admin/summary → FastAPI fetches all reviews
         ↓
 Groq LLM generates insight summaries
         ↓
-Stats + AI insights + full table displayed
+Stats + AI insights + agent actions + full table displayed
 ```
 
 ---

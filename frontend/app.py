@@ -457,16 +457,34 @@ def show_admin_view():
     # ── Metric row ────────────────────────────────────────────────
     st.markdown('<p class="section-header">Overview</p>', unsafe_allow_html=True)
 
-    m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.metric("Total Reviews", summary.get("total", 0))
-    with m2:
-        st.metric("Positive", summary.get("positive_count", 0))
-    with m3:
-        st.metric("Negative", summary.get("negative_count", 0))
-    with m4:
-        avg = summary.get("avg_score") or 0
-        st.metric("Avg Score", f"{float(avg):.1f} / 5.0")
+    total = summary.get("total", 0)
+    pos   = summary.get("positive_count", 0)
+    neg   = summary.get("negative_count", 0)
+    avg   = float(summary.get("avg_score") or 0)
+
+    # Build the HTML as one string — no leading spaces so Markdown won't
+    # treat it as a code block (4-space indent = code block in Markdown).
+    _card = (
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:0.5rem;">'
+        + '<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:1.3rem;">'
+        + '<div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Total Reviews</div>'
+        + f'<div style="color:#ffffff;font-weight:800;font-size:2.2rem;line-height:1.1;">{total}</div>'
+        + '</div>'
+        + '<div style="background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.25);border-radius:16px;padding:1.3rem;">'
+        + '<div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Positive</div>'
+        + f'<div style="color:#00d4aa;font-weight:800;font-size:2.2rem;line-height:1.1;">{pos}</div>'
+        + '</div>'
+        + '<div style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.25);border-radius:16px;padding:1.3rem;">'
+        + '<div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Negative</div>'
+        + f'<div style="color:#ff6b6b;font-weight:800;font-size:2.2rem;line-height:1.1;">{neg}</div>'
+        + '</div>'
+        + '<div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:16px;padding:1.3rem;">'
+        + '<div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Avg Score</div>'
+        + f'<div style="color:#f5a623;font-weight:800;font-size:2.2rem;line-height:1.1;">{avg:.1f} <span style="font-size:1rem;font-weight:400;color:rgba(255,255,255,0.4);">/ 5.0</span></div>'
+        + '</div>'
+        + '</div>'
+    )
+    st.markdown(_card, unsafe_allow_html=True)
 
     st.markdown('<div class="thin-divider"></div>', unsafe_allow_html=True)
 
@@ -503,7 +521,19 @@ def show_admin_view():
     )
     df["Date"] = pd.to_datetime(df["created_at"]).dt.strftime("%Y-%m-%d  %H:%M")
 
-    display_df = df[["review_text", "Sentiment", "Stars", "Date"]].rename(
+    def _format_agent(row):
+        parts = []
+        if row.get("flagged") == 1:
+            urgency = (row.get("urgency") or "high").upper()
+            reason = row.get("flag_reason") or ""
+            parts.append(f"🚩 FLAGGED ({urgency}): {reason}")
+        if row.get("draft_response"):
+            parts.append(f"✍️ DRAFT: {row['draft_response']}")
+        return "\n\n".join(parts) if parts else "—"
+        
+    df["Agent Actions"] = df.apply(_format_agent, axis=1)
+
+    display_df = df[["review_text", "Sentiment", "Stars", "Agent Actions", "Date"]].rename(
         columns={"review_text": "Review"}
     )
 

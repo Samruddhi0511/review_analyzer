@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database import init_db, insert_review, get_all_reviews, get_stats
 from backend.llm import analyze_review, generate_summary
 from backend.models import ReviewRequest
+from backend.agents import run_negative_review_agent
 
 app = FastAPI(
     title="Customer Feedback Analyzer API",
@@ -48,6 +49,10 @@ def submit_review(request: ReviewRequest):
     """
     Accept a raw review, call the LLM to get sentiment + score,
     persist to SQLite, and return the full result.
+
+    If the review is negative, a small agent then decides what
+    action(s) to take (flag for manager, draft a response, check
+    for a repeat-complaint trend) and executes them.
     """
     text = request.review_text.strip()
     if not text:
@@ -64,13 +69,29 @@ def submit_review(request: ReviewRequest):
         score=analysis["score"],
     )
 
-    return {
+    result = {
         "id": review_id,
         "review_text": text,
         "sentiment": analysis["sentiment"],
         "score": analysis["score"],
         "reason": analysis.get("reason", ""),
+        "agent_actions": [],
     }
+
+    # Only run the agent on negative reviews — no point spending an
+    # extra LLM call on a happy customer.
+    if analysis["sentiment"] == "negative":
+        try:
+            agent_result = run_negative_review_agent(review_id, text)
+            result["agent_actions"] = agent_result["actions"]
+        except Exception as exc:
+            # Agent is a nice-to-have on top of the core review flow —
+            # never let it break the main request if Groq hiccups.
+            result["agent_actions"] = [
+                {"tool": None, "result": f"Agent failed to run: {exc}"}
+            ]
+
+    return result
 
 
 @app.get("/reviews", tags=["Reviews"])

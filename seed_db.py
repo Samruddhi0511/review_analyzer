@@ -61,6 +61,16 @@ def seed():
                 sentiment = data["sentiment"].upper()
                 score = data["score"]
                 print(f"[{i:02d}/{len(reviews)}] ✅  {sentiment}  ⭐{score}  — {review[:60]}...")
+
+                # Negative reviews trigger the agent — show what it decided
+                agent_actions = data.get("agent_actions", [])
+                for action in agent_actions:
+                    tool = action.get("tool")
+                    if tool:
+                        print(f"           🤖  agent → {tool}: {action['result']}")
+                    else:
+                        print(f"           🤖  agent → {action['result']}")
+
                 success += 1
             else:
                 print(f"[{i:02d}/{len(reviews)}] ❌  HTTP {resp.status_code}: {resp.text[:80]}")
@@ -69,7 +79,7 @@ def seed():
             print(f"[{i:02d}/{len(reviews)}] ❌  Error: {e}")
             failed += 1
 
-        # Small delay to avoid rate-limiting
+        
         time.sleep(0.5)
 
     print(f"\nDone! {success} seeded successfully, {failed} failed.")
