@@ -60,7 +60,8 @@ TOOLS = [
             "name": "draft_response",
             "description": (
                 "Draft a short, polite customer-facing reply to a "
-                "negative review, acknowledging the issue."
+                "negative review, acknowledging the issue. You MUST start "
+                "the draft with 'Thank you for your feedback.'"
             ),
             "parameters": {
                 "type": "object",
