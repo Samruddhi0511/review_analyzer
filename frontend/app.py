@@ -407,11 +407,11 @@ def show_user_view():
             draft_html = ""
             if draft_text:
                 draft_html = f'''
-                <div style="margin-top:1.5rem;text-align:left;background:rgba(255,255,255,0.03);padding:1.2rem;border-radius:12px;border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:0.75rem;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:0.5rem;letter-spacing:0.05em;">AI Drafted Response</div>
-                    <div style="font-size:0.95rem;color:rgba(255,255,255,0.9);line-height:1.5;font-style:italic;">"{draft_text}"</div>
-                </div>
-                '''
+<div style="margin-top:1.5rem;text-align:left;background:rgba(255,255,255,0.03);padding:1.2rem;border-radius:12px;border:1px solid rgba(255,255,255,0.1);">
+    <div style="font-size:0.75rem;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:0.5rem;letter-spacing:0.05em;">AI Drafted Response</div>
+    <div style="font-size:0.95rem;color:rgba(255,255,255,0.9);line-height:1.5;font-style:italic;">"{draft_text}"</div>
+</div>
+'''
 
             st.markdown(f"""
             <div class="result-card">
